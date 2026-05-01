@@ -2,8 +2,8 @@ name: ダッシュボード更新
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 0 * * 1-5'  # 毎朝9時（JST = UTC+9）、平日のみ
+  schedule:
+    - cron: '0 0 * * 1-5'  # 毎朝9時（JST = UTC+9）、平日のみ
 
 jobs:
   update:
