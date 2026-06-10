@@ -56,8 +56,8 @@ function generateHealthSection(healthData) {
   };
 
   const overallDetailsHtml = (overallHealth.details || '').replace(/\n/g, '<br>');
-  const warningDays = thresholds?.stale_days?.healthy ?? 3;
-  const dangerDays  = thresholds?.stale_days?.warning ?? 7;
+  const warningDays = thresholds?.stale_business_days?.healthy ?? 1;
+  const dangerDays  = thresholds?.stale_business_days?.warning ?? 3;
 
   const stageCardsHtml = PIPELINE_ORDER.map(label => {
     const h    = stageHealth?.[label] || { status: '🟢', label: '順調', count: 0, staleCount: 0 };
@@ -95,9 +95,9 @@ function generateHealthSection(healthData) {
             <div class="health-criteria">
                 <div style="text-align: center;">
                     <div style="display: flex; gap: 15px; justify-content: center; font-size: 0.9em;">
-                        <span><span style="font-size: 1.2em;">🟢</span> ${warningDays}日未満</span>
-                        <span><span style="font-size: 1.2em;">🟡</span> ${warningDays}〜${dangerDays - 1}日</span>
-                        <span><span style="font-size: 1.2em;">🔴</span> ${dangerDays}日以上（最終更新から）</span>
+                        <span><span style="font-size: 1.2em;">🟢</span> ${warningDays}営業日未満</span>
+                        <span><span style="font-size: 1.2em;">🟡</span> ${warningDays}〜${dangerDays - 1}営業日</span>
+                        <span><span style="font-size: 1.2em;">🔴</span> ${dangerDays}営業日以上（最終更新から）</span>
                     </div>
                 </div>
             </div>
@@ -201,7 +201,7 @@ ${itemsHTML}
  */
 function generateTaskStatusSection(healthData) {
   const { magazines, todayActions, thresholds } = healthData;
-  const warningDays = thresholds?.stale_days?.healthy ?? 3;
+  const warningDays = thresholds?.stale_business_days?.healthy ?? 1;
 
   const getBadgeClass = (status) => {
     if (status === '🔴') return 'overdue';
@@ -269,7 +269,7 @@ function generateTaskStatusSection(healthData) {
   return `
         <!-- 3. 今日の対応リスト -->
         <div class="details-section">
-            <h2>🚨 今日の対応リスト（${warningDays}日以上更新なし）</h2>
+            <h2>🚨 今日の対応リスト（${warningDays}営業日以上更新なし）</h2>
             <div style="padding: 4px 0;">
                 ${todayActionItems}
             </div>
@@ -281,9 +281,9 @@ function generateTaskStatusSection(healthData) {
 
             <!-- 凡例 -->
             <div class="status-legend">
-                <div class="legend-item"><div class="legend-dot good"></div><span class="legend-label">${warningDays}日未満</span></div>
-                <div class="legend-item"><div class="legend-dot warning"></div><span class="legend-label">${warningDays}〜${(thresholds?.stale_days?.warning ?? 7) - 1}日</span></div>
-                <div class="legend-item"><div class="legend-dot overdue"></div><span class="legend-label">${thresholds?.stale_days?.warning ?? 7}日以上</span></div>
+                <div class="legend-item"><div class="legend-dot good"></div><span class="legend-label">${warningDays}営業日未満</span></div>
+                <div class="legend-item"><div class="legend-dot warning"></div><span class="legend-label">${warningDays}〜${(thresholds?.stale_business_days?.warning ?? 3) - 1}営業日</span></div>
+                <div class="legend-item"><div class="legend-dot overdue"></div><span class="legend-label">${thresholds?.stale_business_days?.warning ?? 3}営業日以上</span></div>
             </div>
 
             <div class="process-grid" style="grid-template-columns: repeat(6, 1fr); margin-top: 12px;">

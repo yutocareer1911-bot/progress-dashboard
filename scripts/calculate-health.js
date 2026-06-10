@@ -25,29 +25,42 @@ async function loadThresholds() {
   return yaml.load(configContent);
 }
 
-function calculateStaleDays(updatedAt, today) {
+/**
+ * 2つの日付の間の営業日数（土日除く）を計算する
+ */
+function calculateBusinessDays(updatedAt, today) {
   if (!updatedAt) return null;
   const updated = new Date(updatedAt);
   updated.setHours(0, 0, 0, 0);
-  return Math.floor((today - updated) / (1000 * 60 * 60 * 24));
+  if (updated >= today) return 0;
+
+  let businessDays = 0;
+  const current = new Date(updated);
+  current.setDate(current.getDate() + 1);
+  while (current <= today) {
+    const dow = current.getDay();
+    if (dow !== 0 && dow !== 6) businessDays++; // 土日を除外
+    current.setDate(current.getDate() + 1);
+  }
+  return businessDays;
 }
 
-function determineStalenessStatus(staleDays, thresholds) {
-  if (staleDays === null) {
+function determineStalenessStatus(businessDays, thresholds) {
+  if (businessDays === null) {
     return { status: '🟡', label: '注意', message: '更新日不明' };
   }
-  const warningDays = thresholds.stale_days?.healthy ?? 3;
-  const dangerDays = thresholds.stale_days?.warning ?? 7;
-  if (staleDays < warningDays) {
+  const warningDays = thresholds.stale_business_days?.healthy ?? 1;
+  const dangerDays  = thresholds.stale_business_days?.warning ?? 3;
+  if (businessDays < warningDays) {
     return {
       status: '🟢', label: '順調',
-      message: staleDays === 0 ? '本日更新' : `${staleDays}日前に更新`
+      message: businessDays === 0 ? '本日/前営業日に更新' : `${businessDays}営業日前に更新`
     };
   }
-  if (staleDays < dangerDays) {
-    return { status: '🟡', label: '注意', message: `${staleDays}日間更新なし` };
+  if (businessDays < dangerDays) {
+    return { status: '🟡', label: '注意', message: `${businessDays}営業日間更新なし` };
   }
-  return { status: '🔴', label: '危険', message: `${staleDays}日間更新なし` };
+  return { status: '🔴', label: '危険', message: `${businessDays}営業日間更新なし` };
 }
 
 function getStageHealth(tasks) {
@@ -108,9 +121,9 @@ async function calculateHealth() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 各候補者に滞留日数と健康状態を付与
+  // 各候補者に滞留営業日数と健康状態を付与
   const enrichedTasks = linearData.magazines.map(task => {
-    const staleDays = calculateStaleDays(task.updatedAt, today);
+    const staleDays = calculateBusinessDays(task.updatedAt, today);
     const stalenessStatus = determineStalenessStatus(staleDays, thresholds);
     return {
       ...task,
@@ -138,8 +151,8 @@ async function calculateHealth() {
   // 全体健康度
   const overallHealth = getOverallHealth(stageHealth);
 
-  // 今日の対応リスト（滞留日数3日以上の候補者、滞留日数降順）
-  const warningDays = thresholds.stale_days?.healthy ?? 3;
+  // 今日の対応リスト（1営業日以上更新なしの候補者、滞留日数降順）
+  const warningDays = thresholds.stale_business_days?.healthy ?? 1;
   const todayActions = activeTasks
     .filter(t => t.staleDays !== null && t.staleDays >= warningDays)
     .sort((a, b) => (b.staleDays ?? 0) - (a.staleDays ?? 0));
