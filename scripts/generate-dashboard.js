@@ -17,12 +17,11 @@ import { convertAssigneeName, convertTitleEmoji } from '../config/mappings.js';
 import { STATUS_LABELS, PIPELINE_ORDER } from '../config/settings.js';
 
 const STAGE_ICONS = {
-  [STATUS_LABELS.sourcing]:        '🔍',
-  [STATUS_LABELS.contact]:         '📩',
-  [STATUS_LABELS.caInterview]:     '🤝',
-  [STATUS_LABELS.resume]:          '📄',
-  [STATUS_LABELS.clientInterview]: '🏢',
-  [STATUS_LABELS.offer]:           '🎉',
+  [STATUS_LABELS.sourcing]:    '🔍',
+  [STATUS_LABELS.contact]:     '📩',
+  [STATUS_LABELS.caInterview]: '🤝',
+  [STATUS_LABELS.resume]:      '📄',
+  [STATUS_LABELS.offer]:       '🎉',
 };
 import { generateFallbackSuggestions } from './ai-suggestion-helpers.js';
 
