@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { STATUS_LABELS } from '../config/settings.js';
+import { STATUS_LABELS, PIPELINE_ORDER } from '../config/settings.js';
 
 import { generateFallbackSuggestions } from './ai-suggestion-helpers.js';
 
@@ -29,12 +29,9 @@ async function generateAISuggestions() {
   }
 
     console.log('📊 健康度データ読み込み完了:', {
-      企画案ストック: healthData.planStockHealth?.stockCount ?? 0,
-      構成作成中: healthData.summary['2.構成作成中'] ?? 0,
-      原稿執筆中: healthData.summary['3.原稿執筆中'] ?? 0,
-      動画編集中: healthData.summary['4.動画編集中'] ?? 0,
-      原稿執筆健康度: healthData.manuscriptHealth?.status,
-      動画編集健康度: healthData.videoHealth?.status
+      全体: healthData.overallHealth?.label,
+      要対応: healthData.summary?.staleCount ?? 0,
+      総候補者数: healthData.summary?.total ?? 0,
     });
 
   let suggestions;
@@ -164,69 +161,30 @@ async function generateAISuggestions() {
  */
 function buildContext(healthData) {
   const lines = [];
+  const { overallHealth, stageHealth, todayActions, summary } = healthData;
 
-  const planStock = healthData.planStockHealth || {};
-  const composition = healthData.compositionHealth || {};
+  lines.push('### 全体状況');
+  lines.push(`- **全体健康度**: ${overallHealth?.status} ${overallHealth?.label}`);
+  lines.push(`- **総候補者数**: ${summary?.total ?? 0}名（アクティブ）`);
+  lines.push(`- **要対応候補者数**: ${summary?.staleCount ?? 0}名（3日以上更新なし）`);
+  lines.push('');
 
-  lines.push('### 企画案ストック');
-  lines.push(`- **ストック数**: ${planStock.stockCount ?? 0}件`);
-  lines.push(`- **今週の新規追加**: ${planStock.weeklyNewCount ?? 0} / ${planStock.weeklyTarget ?? 2}件`);
-  lines.push(`- **健康度**: ${planStock.status} ${planStock.label}`);
-  if (planStock.shortReason) {
-    lines.push(`- **詳細**: ${planStock.shortReason}`);
+  lines.push('### フェーズ別候補者数と健康度');
+  for (const label of PIPELINE_ORDER) {
+    const h = stageHealth?.[label] || {};
+    lines.push(`- **${label}**: ${h.count ?? 0}名 ${h.status ?? ''} ${h.label ?? ''} (滞留${h.staleCount ?? 0}名)`);
   }
   lines.push('');
 
-  lines.push('### 構成作成');
-  lines.push(`- **完了数**: ${composition.completedCount ?? 0} / ${composition.target ?? 3}本`);
-  lines.push(`- **健康度**: ${composition.status} ${composition.label}`);
-  if (composition.shortReason) {
-    lines.push(`- **詳細**: ${composition.shortReason}`);
-  }
-  lines.push('');
-
-  lines.push('### 原稿執筆中のマガジン');
-  const manuscriptCount = healthData.summary?.['3.原稿執筆中'] || 0;
-  lines.push(`- **件数**: ${manuscriptCount}件`);
-  lines.push(`- **健康度**: ${healthData.manuscriptHealth?.status} ${healthData.manuscriptHealth?.label}`);
-  if (healthData.manuscriptHealth?.details) {
-    lines.push(`- **詳細**: ${healthData.manuscriptHealth.details}`);
-  }
-
-  const manuscripts = healthData.magazines.filter(m =>
-    m.label === STATUS_LABELS.manuscript && m.state?.type !== 'completed'
-  );
-  if (manuscripts.length > 0) {
-    lines.push('- **マガジン一覧**:');
-    manuscripts.forEach(mag => {
-      const statusInfo = mag.displayHealthStatus?.message || '期限内';
-      lines.push(`  - 【${mag.title}】${mag.displayHealthStatus?.status || '🟢'} ${statusInfo}`);
+  if (todayActions && todayActions.length > 0) {
+    lines.push('### 今日の対応が必要な候補者（滞留3日以上）');
+    todayActions.slice(0, 10).forEach(t => {
+      lines.push(`- 【${t.title}】${t.label} ${t.stalenessStatus?.status ?? ''} ${t.stalenessStatus?.message ?? ''}`);
     });
+    lines.push('');
   }
-  lines.push('');
-
-  lines.push('### 動画編集中のマガジン');
-  const videoCount = healthData.summary?.['4.動画編集中'] || 0;
-  lines.push(`- **件数**: ${videoCount}件`);
-  lines.push(`- **健康度**: ${healthData.videoHealth?.status} ${healthData.videoHealth?.label}`);
-  if (healthData.videoHealth?.details) {
-    lines.push(`- **詳細**: ${healthData.videoHealth.details}`);
-  }
-
-  const videos = healthData.magazines.filter(m =>
-    m.label === STATUS_LABELS.video && m.state?.type !== 'completed'
-  );
-  if (videos.length > 0) {
-    lines.push('- **マガジン一覧**:');
-    videos.forEach(mag => {
-      const statusInfo = mag.displayHealthStatus?.message || '期限内';
-      lines.push(`  - 【${mag.title}】${mag.displayHealthStatus?.status || '🟢'} ${statusInfo}`);
-    });
-  }
-  lines.push('');
 
   lines.push('### その他の統計');
-  lines.push(`- **全マガジン数**: ${healthData.magazines.length}件`);
   lines.push(`- **生成日時**: ${new Date(healthData.calculatedAt).toLocaleString('ja-JP')}`);
 
   return lines.join('\n');
