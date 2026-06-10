@@ -179,7 +179,8 @@ function buildContext(healthData) {
   if (todayActions && todayActions.length > 0) {
     lines.push('### 今日の対応が必要な候補者（滞留3日以上）');
     todayActions.slice(0, 10).forEach(t => {
-      lines.push(`- 【${t.title}】${t.label} ${t.stalenessStatus?.status ?? ''} ${t.stalenessStatus?.message ?? ''}`);
+      // 氏名・個人情報はAIに送らず、フェーズと滞留状況のみ送信
+      lines.push(`- ${t.label} ${t.stalenessStatus?.status ?? ''} ${t.stalenessStatus?.message ?? ''}`);
     });
     lines.push('');
   }
