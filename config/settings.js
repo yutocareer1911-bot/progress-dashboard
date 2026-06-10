@@ -22,13 +22,13 @@ export const PIPELINE_ORDER = [
   STATUS_LABELS.offer,
 ];
 
-// タイトルの先頭プレフィックスとフェーズの対応
-// 例: "[スカウト] 山田太郎 / ABC株式会社" → スカウト・候補者発掘
-export const TITLE_PREFIX_MAP = [
-  { prefix: '[スカウト]',   label: STATUS_LABELS.sourcing },
-  { prefix: '[コンタクト]', label: STATUS_LABELS.contact },
-  { prefix: '[CA面談]',     label: STATUS_LABELS.caInterview },
-  { prefix: '[書類]',       label: STATUS_LABELS.resume },
-  { prefix: '[企業面接]',   label: STATUS_LABELS.clientInterview },
-  { prefix: '[内定]',       label: STATUS_LABELS.offer },
+// Linearのラベル名 → フェーズの対応
+// Linearでこの名前のラベルを作成してイシューに付けるだけで自動分類される
+export const LINEAR_LABEL_MAP = [
+  { labelName: 'スカウト',   pipelineLabel: STATUS_LABELS.sourcing },
+  { labelName: 'コンタクト', pipelineLabel: STATUS_LABELS.contact },
+  { labelName: 'CA面談',     pipelineLabel: STATUS_LABELS.caInterview },
+  { labelName: '書類',       pipelineLabel: STATUS_LABELS.resume },
+  { labelName: '企業面接',   pipelineLabel: STATUS_LABELS.clientInterview },
+  { labelName: '内定',       pipelineLabel: STATUS_LABELS.offer },
 ];
