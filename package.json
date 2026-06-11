@@ -13,6 +13,7 @@
     "post-slack": "node scripts/post-to-slack.js",
     "post-slack:dry-run": "DRY_RUN=1 node scripts/post-to-slack.js",
     "new-candidate": "node scripts/new-candidate.js",
+    "auto-subtasks": "node scripts/auto-create-subtasks.js",
     "run-all": "npm run fetch-data && npm run calculate-health && npm run ai-suggestions && npm run generate-dashboard && npm run deploy && npm run screenshot && npm run post-slack"
   },
   "keywords": [
