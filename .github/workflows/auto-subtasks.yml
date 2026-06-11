@@ -3,9 +3,8 @@ name: サブタスク自動作成
 on:
   workflow_dispatch:
   schedule:
-    # 平日 9:00〜19:00（JST）の間、10分おきに実行
-    # JST = UTC+9 なので UTC 0:00〜10:00
-    - cron: '*/10 0-10 * * 1-5'
+    - cron: '0 0 * * 1-5'   # 平日 9:00 JST（UTC 0:00）
+    - cron: '0 10 * * 1-5'  # 平日 19:00 JST（UTC 10:00）
 
 jobs:
   auto-subtasks:
