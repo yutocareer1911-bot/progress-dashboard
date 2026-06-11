@@ -119,10 +119,11 @@ async function main() {
   let dueDate = null;
   const hasDueDate = await confirm({ message: '次回連絡予定日 (Due Date) を設定しますか？', default: true });
   if (hasDueDate) {
-    dueDate = await input({
-      message: '日付 (YYYY-MM-DD):',
-      validate: (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? true : 'YYYY-MM-DD の形式で入力してください',
+    const raw = await input({
+      message: '日付 (YYYYMMDD):',
+      validate: (v) => /^\d{8}$/.test(v) ? true : '8桁の数字で入力してください（例：20260615）',
     });
+    dueDate = `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
   }
 
   const title = candidateName;
