@@ -97,7 +97,6 @@ async function main() {
 
   // ① 候補者情報の入力
   const candidateName = await input({ message: '候補者名:' });
-  const companyName = await input({ message: '会社名:' });
 
   const phaseChoice = await select({
     message: 'フェーズ:',
@@ -126,7 +125,7 @@ async function main() {
     });
   }
 
-  const title = `${candidateName} / ${companyName}`;
+  const title = candidateName;
 
   console.log(`\n→ Linearにイシューを作成中...`);
 
@@ -152,16 +151,46 @@ async function main() {
   console.log(`   ${issue.url}`);
 
   // ④ フェーズに対応するサブタスクを作成
-  const subTaskTitles = TASK_TEMPLATES[phaseChoice] || [];
-  if (subTaskTitles.length > 0) {
-    console.log(`\n→ サブタスク ${subTaskTitles.length} 件を作成中...`);
-    for (const taskTitle of subTaskTitles) {
-      await createSubIssue({ teamId: team.id, parentId: issue.id, title: taskTitle });
-      console.log(`   ✅ ${taskTitle}`);
+  if (phaseChoice === '面接') {
+    // 面接フェーズは企業ごとにサブタスクを作成
+    console.log('\n面接フェーズ：企業名を入力してください（空欄でEnterを押すと終了）');
+    const companies = [];
+    let idx = 1;
+    while (true) {
+      const co = await input({ message: `企業名 ${idx}:` });
+      if (!co.trim()) break;
+      companies.push(co.trim());
+      idx++;
     }
-    console.log(`\n✅ 完了！合計 ${subTaskTitles.length} 件のサブタスクを作成しました。`);
+
+    if (companies.length === 0) {
+      console.log('\n✅ 完了！（企業なしで作成しました）');
+    } else {
+      const templateTasks = TASK_TEMPLATES['面接'] || [];
+      let total = 0;
+      console.log(`\n→ ${companies.length} 社 × ${templateTasks.length} 件のサブタスクを作成中...`);
+      for (const company of companies) {
+        for (const taskTitle of templateTasks) {
+          const subTitle = `【${company}】${taskTitle}`;
+          await createSubIssue({ teamId: team.id, parentId: issue.id, title: subTitle });
+          console.log(`   ✅ ${subTitle}`);
+          total++;
+        }
+      }
+      console.log(`\n✅ 完了！合計 ${total} 件のサブタスクを作成しました。`);
+    }
   } else {
-    console.log('\n✅ 完了！（このフェーズにはサブタスクテンプレートがありません）');
+    const subTaskTitles = TASK_TEMPLATES[phaseChoice] || [];
+    if (subTaskTitles.length > 0) {
+      console.log(`\n→ サブタスク ${subTaskTitles.length} 件を作成中...`);
+      for (const taskTitle of subTaskTitles) {
+        await createSubIssue({ teamId: team.id, parentId: issue.id, title: taskTitle });
+        console.log(`   ✅ ${taskTitle}`);
+      }
+      console.log(`\n✅ 完了！合計 ${subTaskTitles.length} 件のサブタスクを作成しました。`);
+    } else {
+      console.log('\n✅ 完了！（このフェーズにはサブタスクテンプレートがありません）');
+    }
   }
 
   console.log('\nLinearで確認してください:', issue.url);
