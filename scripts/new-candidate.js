@@ -87,6 +87,80 @@ async function createSubIssue({ teamId, parentId, title }) {
   return data.issueCreate.issue;
 }
 
+const INTERVIEW_STAGES = ['カジュアル', '1次', '2次', '3次', '最終', 'オファー', '追加面談'];
+
+async function askDate(message) {
+  const raw = await input({
+    message: `${message} (YYYYMMDD):`,
+    validate: (v) => /^\d{8}$/.test(v) ? true : '8桁の数字で入力してください（例：20260615）',
+  });
+  const formatted = `${raw.slice(0,4)}/${raw.slice(4,6)}/${raw.slice(6,8)}`;
+  return formatted;
+}
+
+async function handleInterviewPhase({ teamId, parentId }) {
+  console.log('\n面接フェーズ：企業情報を入力してください（企業名を空欄でEnterすると終了）\n');
+  let total = 0;
+  let idx = 1;
+
+  while (true) {
+    const company = await input({ message: `企業名 ${idx}:` });
+    if (!company.trim()) break;
+
+    const stage = await select({
+      message: '面接フェーズ:',
+      choices: INTERVIEW_STAGES.map(s => ({ name: s, value: s })),
+    });
+
+    const prefix = `【${company.trim()} / ${stage}】`;
+    const tasks = [];
+
+    // 面接日程
+    const hasSchedule = await confirm({ message: '面接日程は決まっていますか？', default: true });
+    if (hasSchedule) {
+      const date = await askDate('面接日程');
+      tasks.push(`${prefix}面接日程: ${date}`);
+    } else {
+      tasks.push(`${prefix}面接日程の回収`);
+    }
+
+    // 意向の回収
+    tasks.push(`${prefix}意向の回収`);
+
+    // 参考情報
+    const hasRef = await confirm({ message: '参考情報はありますか？', default: true });
+    if (hasRef) {
+      tasks.push(`${prefix}参考情報の送付`);
+    } else {
+      tasks.push(`${prefix}参考情報の依頼・送付`);
+    }
+
+    // 面接対策
+    const hasPrepSchedule = await confirm({ message: '面接対策の日程は決まっていますか？', default: false });
+    if (hasPrepSchedule) {
+      const date = await askDate('面接対策日程');
+      tasks.push(`${prefix}面接対策の実施: ${date}`);
+    } else {
+      tasks.push(`${prefix}面接対策の日程調整`);
+    }
+
+    console.log(`\n→ ${company.trim()} のサブタスク ${tasks.length} 件を作成中...`);
+    for (const title of tasks) {
+      await createSubIssue({ teamId, parentId, title });
+      console.log(`   ✅ ${title}`);
+      total++;
+    }
+    console.log('');
+    idx++;
+  }
+
+  if (total === 0) {
+    console.log('✅ 完了！（企業なしで作成しました）');
+  } else {
+    console.log(`✅ 完了！合計 ${total} 件のサブタスクを作成しました。`);
+  }
+}
+
 async function main() {
   if (!LINEAR_API_KEY) {
     console.error('❌ MAGAZINE_LINEAR_API_KEY が設定されていません');
@@ -153,33 +227,7 @@ async function main() {
 
   // ④ フェーズに対応するサブタスクを作成
   if (phaseChoice === '面接') {
-    // 面接フェーズは企業ごとにサブタスクを作成
-    console.log('\n面接フェーズ：企業名を入力してください（空欄でEnterを押すと終了）');
-    const companies = [];
-    let idx = 1;
-    while (true) {
-      const co = await input({ message: `企業名 ${idx}:` });
-      if (!co.trim()) break;
-      companies.push(co.trim());
-      idx++;
-    }
-
-    if (companies.length === 0) {
-      console.log('\n✅ 完了！（企業なしで作成しました）');
-    } else {
-      const templateTasks = TASK_TEMPLATES['面接'] || [];
-      let total = 0;
-      console.log(`\n→ ${companies.length} 社 × ${templateTasks.length} 件のサブタスクを作成中...`);
-      for (const company of companies) {
-        for (const taskTitle of templateTasks) {
-          const subTitle = `【${company}】${taskTitle}`;
-          await createSubIssue({ teamId: team.id, parentId: issue.id, title: subTitle });
-          console.log(`   ✅ ${subTitle}`);
-          total++;
-        }
-      }
-      console.log(`\n✅ 完了！合計 ${total} 件のサブタスクを作成しました。`);
-    }
+    await handleInterviewPhase({ teamId: team.id, parentId: issue.id });
   } else {
     const subTaskTitles = TASK_TEMPLATES[phaseChoice] || [];
     if (subTaskTitles.length > 0) {
