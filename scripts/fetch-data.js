@@ -57,6 +57,7 @@ async function fetchLinearData() {
     state { id name type }
     assignee { id name displayName }
     labels { nodes { id name } }
+    priority
     dueDate
     createdAt
     updatedAt
@@ -143,6 +144,7 @@ async function fetchLinearData() {
         name: issue.assignee.displayName || issue.assignee.name
       } : null,
       dueDate: issue.dueDate,
+      priority: issue.priority ?? 0,
       label,
       state: { id: issue.state.id, name: issue.state.name, type: issue.state.type },
       subIssues: (issue.children?.nodes || []).map(sub => ({

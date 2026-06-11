@@ -17,11 +17,19 @@ import { convertAssigneeName, convertTitleEmoji } from '../config/mappings.js';
 import { STATUS_LABELS, PIPELINE_ORDER } from '../config/settings.js';
 
 const STAGE_ICONS = {
-  [STATUS_LABELS.sourcing]:    '🔍',
-  [STATUS_LABELS.contact]:     '📩',
-  [STATUS_LABELS.caInterview]: '🤝',
-  [STATUS_LABELS.resume]:      '📄',
-  [STATUS_LABELS.offer]:       '🎉',
+  [STATUS_LABELS.horiokoshi]:     '🔍',
+  [STATUS_LABELS.firstMeeting]:   '🤝',
+  [STATUS_LABELS.secondMeeting]:  '🔄',
+  [STATUS_LABELS.documentSubmit]: '📄',
+  [STATUS_LABELS.interview]:      '🏢',
+};
+
+const PRIORITY_LABELS = {
+  0: { text: '-',      cls: 'pri-none' },
+  1: { text: 'Urgent', cls: 'pri-urgent' },
+  2: { text: 'High',   cls: 'pri-high' },
+  3: { text: 'Med',    cls: 'pri-medium' },
+  4: { text: 'Low',    cls: 'pri-low' },
 };
 import { generateFallbackSuggestions } from './ai-suggestion-helpers.js';
 
@@ -62,7 +70,7 @@ function generateHealthSection(healthData) {
   const stageCardsHtml = PIPELINE_ORDER.map(label => {
     const h    = stageHealth?.[label] || { status: '🟢', label: '順調', count: 0, staleCount: 0 };
     const icon = STAGE_ICONS[label] || '📌';
-    const shortLabel = label.replace('・候補者発掘', '').replace('初回コンタクト', 'コンタクト');
+    const shortLabel = label;
     return `
                 <div class="health-card">
                     <h3>${icon} ${escapeHtml(shortLabel)}</h3>
@@ -87,7 +95,7 @@ function generateHealthSection(healthData) {
 
             <!-- パイプラインフェーズ別カード -->
             <div style="margin-top: 16px; margin-bottom: 6px; font-size: 0.85em; color: #888; font-weight: 600; letter-spacing: 0.05em;">📊 フェーズ別状況（総${summary?.total ?? 0}名 / 要対応${summary?.staleCount ?? 0}名）</div>
-            <div class="health-grid" style="grid-template-columns: repeat(6, 1fr);">
+            <div class="health-grid" style="grid-template-columns: repeat(5, 1fr);">
                 ${stageCardsHtml}
             </div>
 
@@ -236,17 +244,20 @@ function generateTaskStatusSection(healthData) {
       return '<li class="task-item"><div class="task-title" style="color:#bbb;">候補者なし</div></li>';
     }
     return taskList.map(task => {
-      const { title, assignee, dueDate, stalenessStatus } = task;
+      const { title, assignee, dueDate, stalenessStatus, priority } = task;
       const staleInfo = stalenessStatus?.message
         ? `<div class="task-detail">${escapeHtml(stalenessStatus.message)}</div>` : '';
       const dueDateStr = dueDate ? formatDateShort(new Date(dueDate)) : '未設定';
       const badgeClass = getBadgeClass(stalenessStatus?.status);
+      const pri = PRIORITY_LABELS[priority ?? 0] || PRIORITY_LABELS[0];
+      const priBadge = priority && priority !== 0
+        ? `<span class="priority-badge ${pri.cls}">${pri.text}</span>` : '';
       return `
                             <li class="task-item">
-                                <div class="task-title">${escapeHtml(convertTitleEmoji(title))}</div>
+                                <div class="task-title">${priBadge}${escapeHtml(convertTitleEmoji(title))}</div>
                                 <div class="task-meta">
                                     <span class="task-assignee">${escapeHtml(convertAssigneeName(assignee?.name))}</span>
-                                    <span class="task-due ${badgeClass}"><span class="due-label">期限:</span>${dueDateStr}</span>
+                                    <span class="task-due ${badgeClass}"><span class="due-label">次回:</span>${dueDateStr}</span>
                                 </div>
                                 ${staleInfo}
                             </li>`;
@@ -286,7 +297,7 @@ function generateTaskStatusSection(healthData) {
                 <div class="legend-item"><div class="legend-dot overdue"></div><span class="legend-label">${thresholds?.stale_business_days?.warning ?? 3}営業日以上</span></div>
             </div>
 
-            <div class="process-grid" style="grid-template-columns: repeat(6, 1fr); margin-top: 12px;">
+            <div class="process-grid" style="grid-template-columns: repeat(5, 1fr); margin-top: 12px;">
                 ${stageColumns}
             </div>
         </div>
@@ -322,12 +333,11 @@ function generateCalendarSection(healthData) {
       const dateKey = dueDate.toISOString().split('T')[0];
       if (!tasksByDate[dateKey]) tasksByDate[dateKey] = [];
 
-      let phase = 'sourcing';
-      if (task.label === STATUS_LABELS.contact)         phase = 'contact';
-      else if (task.label === STATUS_LABELS.caInterview)     phase = 'ca';
-      else if (task.label === STATUS_LABELS.resume)          phase = 'resume';
-      else if (task.label === STATUS_LABELS.clientInterview) phase = 'client';
-      else if (task.label === STATUS_LABELS.offer)           phase = 'offer';
+      let phase = 'horiokoshi';
+      if (task.label === STATUS_LABELS.firstMeeting)   phase = 'firstMeeting';
+      else if (task.label === STATUS_LABELS.secondMeeting)  phase = 'secondMeeting';
+      else if (task.label === STATUS_LABELS.documentSubmit) phase = 'documentSubmit';
+      else if (task.label === STATUS_LABELS.interview)      phase = 'interview';
 
       if (task.state?.type === 'completed') phase = 'completed';
 
@@ -364,15 +374,15 @@ function generateCalendarSection(healthData) {
             <div class="calendar-legend">
                 <div class="calendar-legend-item">
                     <div class="calendar-legend-box manuscript"></div>
-                    <span class="calendar-legend-label">スカウト/コンタクト</span>
+                    <span class="calendar-legend-label">掘り起こし</span>
                 </div>
                 <div class="calendar-legend-item">
                     <div class="calendar-legend-box video"></div>
-                    <span class="calendar-legend-label">CA面談/書類</span>
+                    <span class="calendar-legend-label">初回面談/再面談</span>
                 </div>
                 <div class="calendar-legend-item">
                     <div class="calendar-legend-box" style="background: #6366f1;"></div>
-                    <span class="calendar-legend-label">企業面接/内定</span>
+                    <span class="calendar-legend-label">書類提出/面接</span>
                 </div>
                 <div class="calendar-legend-item">
                     <div class="calendar-legend-box published"></div>
@@ -462,9 +472,20 @@ async function generateDashboard() {
 ${styles}
         .health-grid { grid-template-columns: repeat(3, 1fr); }
         .process-grid { grid-template-columns: repeat(3, 1fr); }
-        .phase-phone { background: #f97316; color: white; }
-        .phase-internal { background: #6366f1; color: white; }
-        .phase-completed { background: #6b7280; color: white; }
+        /* カレンダーフェーズ色 */
+        .phase-horiokoshi    { background: #3b82f6; color: white; }
+        .phase-firstMeeting  { background: #10b981; color: white; }
+        .phase-secondMeeting { background: #f59e0b; color: white; }
+        .phase-documentSubmit{ background: #6366f1; color: white; }
+        .phase-interview     { background: #ef4444; color: white; }
+        .phase-completed     { background: #6b7280; color: white; }
+        /* 優先度バッジ */
+        .priority-badge { display:inline-block; font-size:0.65em; font-weight:700; padding:1px 5px; border-radius:3px; margin-right:5px; vertical-align:middle; }
+        .pri-urgent { background:#ef4444; color:white; }
+        .pri-high   { background:#f97316; color:white; }
+        .pri-medium { background:#3b82f6; color:white; }
+        .pri-low    { background:#9ca3af; color:white; }
+        .pri-none   { background:#e5e7eb; color:#6b7280; }
     </style>
 </head>
 <body>
